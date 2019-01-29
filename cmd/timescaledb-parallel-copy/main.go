@@ -46,6 +46,7 @@ var (
 	columnCount int64
 	rowCount    int64
 	tsColumns   []uint64
+	stringOfTs  string
 )
 
 type batch struct {
@@ -73,14 +74,20 @@ func init() {
 
 	flag.BoolVar(&showVersion, "version", false, "Show the version of this tool")
 
-	tsStrings := flag.Args() // Columns that need TS conversion
-	tsColumns = make([]uint64, len(tsStrings))
+	flag.StringVar(&stringOfTs, "convert-from-epoch", "", "Columns that need to be converted from epoch to Date. Comma separated, e.g. -convert-from-epoch 1,2,3 .")
+	flag.Parse()
 
+	tsStrings := strings.Split(stringOfTs, ",") // Columns that need TS conversion
+	if len(tsStrings) == 1 {
+		if len(tsStrings[0]) == 0 {
+			tsStrings = make([]string, 0)
+		}
+	}
+	tsColumns = make([]uint64, len(tsStrings))
 	for i, tsString := range tsStrings {
 		tsColumns[i], _ = strconv.ParseUint(tsString, 10, 64)
 	}
-
-	flag.Parse()
+	//fmt.Println("tsColumns", tsColumns)
 }
 
 func getConnectString() string {
