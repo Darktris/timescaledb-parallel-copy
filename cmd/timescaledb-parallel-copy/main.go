@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -19,7 +20,7 @@ import (
 
 const (
 	binName = "timescaledb-parallel-copy"
-	version = "0.1.0"
+	version = "0.1.1-beta"
 )
 
 // Flag vars
@@ -44,6 +45,7 @@ var (
 
 	columnCount int64
 	rowCount    int64
+	tsColumns   []uint64
 )
 
 type batch struct {
@@ -70,6 +72,13 @@ func init() {
 	flag.BoolVar(&verbose, "verbose", false, "Print more information about copying statistics")
 
 	flag.BoolVar(&showVersion, "version", false, "Show the version of this tool")
+
+	tsStrings := flag.Args() // Columns that need TS conversion
+	tsColumns = make([]uint64, len(tsStrings))
+
+	for i, tsString := range tsStrings {
+		tsColumns[i], _ = strconv.ParseUint(tsString, 10, 64)
+	}
 
 	flag.Parse()
 }
@@ -170,11 +179,27 @@ func report() {
 func scan(itemsPerBatch int, scanner *bufio.Scanner, batchChan chan *batch) int64 {
 	rows := make([]string, 0, itemsPerBatch)
 	var linesRead int64
+	var line string
+	var outputline string
+	var tsFloat float64
+	enableConv := (len(tsColumns) > 0)
 
 	for scanner.Scan() {
 		linesRead++
 
-		rows = append(rows, scanner.Text())
+		if enableConv {
+			line = scanner.Text()
+			fields := strings.Split(line, splitCharacter)
+			for _, tsIndex := range tsColumns {
+				tsFloat, _ = strconv.ParseFloat(fields[tsIndex], 64)
+				fields[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
+			}
+			outputline = strings.Join(fields, splitCharacter)
+		} else {
+			outputline = scanner.Text()
+		}
+
+		rows = append(rows, outputline)
 		if len(rows) >= itemsPerBatch { // dispatch to COPY worker & reset
 			batchChan <- &batch{rows}
 			rows = make([]string, 0, itemsPerBatch)
