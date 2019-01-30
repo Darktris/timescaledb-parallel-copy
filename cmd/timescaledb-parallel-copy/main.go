@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -187,10 +186,7 @@ func report() {
 func scan(itemsPerBatch int, scanner *bufio.Scanner, batchChan chan *batch) int64 {
 	rows := make([]string, 0, itemsPerBatch)
 	var linesRead int64
-	var line string
 	var outputline string
-	var tsFloat float64
-	separator := splitCharacter
 	for scanner.Scan() {
 		linesRead++
 
@@ -216,7 +212,6 @@ func scan(itemsPerBatch int, scanner *bufio.Scanner, batchChan chan *batch) int6
 
 // processBatches reads batches from C and writes them to the target server, while tracking stats on the write.
 func processBatches(wg *sync.WaitGroup, C chan *batch) {
-	enableConv := (len(tsColumns) > 0)
 	var tsFloat float64
 	dbBench := sqlx.MustConnect("postgres", getConnectString())
 	defer dbBench.Close()
@@ -248,16 +243,13 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 			sChar = "\t"
 		}
 		for _, line := range batch.rows {
-			if enableConv {
-				//fields := strings.Split(line, splitCharacter)
-				sp := regexp.MustCompile(splitCharacter).Split(line, -1)
-				for _, tsIndex := range tsColumns {
-					tsFloat, _ = strconv.ParseFloat(sp[tsIndex], 64)
-					sp[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
-				}
+			sp := strings.Split(line, sChar)
+
+			for _, tsIndex := range tsColumns {
+				tsFloat, _ = strconv.ParseFloat(sp[tsIndex], 64)
+				sp[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
 			}
 
-			sp := strings.Split(line, sChar)
 			columnCountWorker += int64(len(sp))
 			// For some reason this is only needed for tab splitting
 			if sChar == "\t" {
