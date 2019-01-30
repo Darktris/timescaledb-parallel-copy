@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -215,6 +216,7 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 	var tsFloat float64
 	dbBench := sqlx.MustConnect("postgres", getConnectString())
 	defer dbBench.Close()
+	splitter := regexp.MustCompile(splitCharacter)
 
 	columnCountWorker := int64(0)
 	for batch := range C {
@@ -243,7 +245,7 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 			sChar = "\t"
 		}
 		for _, line := range batch.rows {
-			sp := strings.Split(line, sChar)
+			sp := splitter.Split(line, -1)
 
 			for _, tsIndex := range tsColumns {
 				tsFloat, _ = strconv.ParseFloat(sp[tsIndex], 64)
