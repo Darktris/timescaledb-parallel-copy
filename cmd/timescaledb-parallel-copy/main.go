@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-	"regexp"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -190,25 +190,11 @@ func scan(itemsPerBatch int, scanner *bufio.Scanner, batchChan chan *batch) int6
 	var line string
 	var outputline string
 	var tsFloat float64
-	enableConv := (len(tsColumns) > 0)
-    separator := splitCharacter
+	separator := splitCharacter
 	for scanner.Scan() {
 		linesRead++
 
-		if enableConv {
-			line = scanner.Text()
-            //fields := strings.Split(line, splitCharacter)
-            fields := regexp.MustCompile(separator).Split(line, -1)
-			for _, tsIndex := range tsColumns {
-				tsFloat, _ = strconv.ParseFloat(fields[tsIndex], 64)
-				fields[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
-			}
-            splitCharacter = ","
-			outputline = strings.Join(fields, splitCharacter)
-		} else {
-			outputline = scanner.Text()
-		}
-
+		outputline = scanner.Text()
 		rows = append(rows, outputline)
 		if len(rows) >= itemsPerBatch { // dispatch to COPY worker & reset
 			batchChan <- &batch{rows}
@@ -230,6 +216,8 @@ func scan(itemsPerBatch int, scanner *bufio.Scanner, batchChan chan *batch) int6
 
 // processBatches reads batches from C and writes them to the target server, while tracking stats on the write.
 func processBatches(wg *sync.WaitGroup, C chan *batch) {
+	enableConv := (len(tsColumns) > 0)
+	var tsFloat float64
 	dbBench := sqlx.MustConnect("postgres", getConnectString())
 	defer dbBench.Close()
 
@@ -260,6 +248,15 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 			sChar = "\t"
 		}
 		for _, line := range batch.rows {
+			if enableConv {
+				//fields := strings.Split(line, splitCharacter)
+				sp := regexp.MustCompile(splitCharacter).Split(line, -1)
+				for _, tsIndex := range tsColumns {
+					tsFloat, _ = strconv.ParseFloat(sp[tsIndex], 64)
+					sp[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
+				}
+			}
+
 			sp := strings.Split(line, sChar)
 			columnCountWorker += int64(len(sp))
 			// For some reason this is only needed for tab splitting
