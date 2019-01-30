@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"regexp"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -190,17 +191,19 @@ func scan(itemsPerBatch int, scanner *bufio.Scanner, batchChan chan *batch) int6
 	var outputline string
 	var tsFloat float64
 	enableConv := (len(tsColumns) > 0)
-
+    separator := splitCharacter
 	for scanner.Scan() {
 		linesRead++
 
 		if enableConv {
 			line = scanner.Text()
-			fields := strings.Split(line, splitCharacter)
+            //fields := strings.Split(line, splitCharacter)
+            fields := regexp.MustCompile(separator).Split(line, -1)
 			for _, tsIndex := range tsColumns {
 				tsFloat, _ = strconv.ParseFloat(fields[tsIndex], 64)
 				fields[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
 			}
+            splitCharacter = ","
 			outputline = strings.Join(fields, splitCharacter)
 		} else {
 			outputline = scanner.Text()
@@ -235,7 +238,7 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 		start := time.Now()
 
 		tx := dbBench.MustBegin()
-		delimStr := fmt.Sprintf("'%s'", splitCharacter)
+		delimStr := fmt.Sprintf("'%s'", ",")
 		if splitCharacter == "\\t" {
 			delimStr = "E" + delimStr
 		}
