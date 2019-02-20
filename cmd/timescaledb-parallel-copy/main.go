@@ -34,6 +34,7 @@ var (
 
 	copyOptions    string
 	splitCharacter string
+	joinCharacter  string
 	fromFile       string
 	columns        string
 
@@ -64,6 +65,7 @@ func init() {
 
 	flag.StringVar(&copyOptions, "copy-options", "CSV", "Additional options to pass to COPY (e.g., NULL 'NULL')")
 	flag.StringVar(&splitCharacter, "split", ",", "Character to split by")
+	flag.StringVar(&joinCharacter, "split", "|", "Character to join by")
 	flag.StringVar(&fromFile, "file", "", "File to read from rather than stdin")
 	flag.StringVar(&columns, "columns", "", "Comma-separated columns present in CSV")
 
@@ -223,8 +225,8 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 		start := time.Now()
 
 		tx := dbBench.MustBegin()
-		delimStr := fmt.Sprintf("'%s'", ",")
-		if splitCharacter == "\\t" {
+		delimStr := fmt.Sprintf("'%s'", joinCharacter)
+		if joinCharacter == "\\t" {
 			delimStr = "E" + delimStr
 		}
 		var copyCmd string
