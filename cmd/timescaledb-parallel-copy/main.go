@@ -219,7 +219,7 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 	dbBench := sqlx.MustConnect("postgres", getConnectString())
 	defer dbBench.Close()
 	splitter := regexp.MustCompile(splitCharacter)
-    var sp []string
+	var sp []string
 
 	columnCountWorker := int64(0)
 	for batch := range C {
@@ -255,7 +255,7 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 				sp[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
 			}
 
-            line = strings.Join(sp, ",")
+			line = strings.Join(sp, joinCharacter)
 			columnCountWorker += int64(len(sp))
 			// For some reason this is only needed for tab splitting
 			if sChar == "\t" {
