@@ -65,7 +65,7 @@ func init() {
 
 	flag.StringVar(&copyOptions, "copy-options", "CSV", "Additional options to pass to COPY (e.g., NULL 'NULL')")
 	flag.StringVar(&splitCharacter, "split", ",", "Character to split by")
-	flag.StringVar(&joinCharacter, "split", "|", "Character to join by")
+	flag.StringVar(&joinCharacter, "join", "|", "Character to join by")
 	flag.StringVar(&fromFile, "file", "", "File to read from rather than stdin")
 	flag.StringVar(&columns, "columns", "", "Comma-separated columns present in CSV")
 
