@@ -44,11 +44,11 @@ var (
 	reportingPeriod time.Duration
 	verbose         bool
 	showVersion     bool
-
-	columnCount int64
-	rowCount    int64
-	tsColumns   []uint64
-	stringOfTs  string
+	debug           bool
+	columnCount     int64
+	rowCount        int64
+	tsColumns       []uint64
+	stringOfTs      string
 )
 
 type batch struct {
@@ -249,7 +249,9 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 		}
 		for _, line := range batch.rows {
 			sp = splitter.Split(line, -1)
-
+			if debug {
+				fmt.Println(sp)
+			}
 			for _, tsIndex := range tsColumns {
 				tsFloat, _ = strconv.ParseFloat(sp[tsIndex], 64)
 				sp[tsIndex] = time.Unix(0, int64(tsFloat*1e9)).UTC().Format(time.UnixDate)
