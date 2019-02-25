@@ -74,6 +74,7 @@ func init() {
 	flag.BoolVar(&logBatches, "log-batches", false, "Whether to time individual batches.")
 	flag.DurationVar(&reportingPeriod, "reporting-period", 0*time.Second, "Period to report insert stats; if 0s, intermediate results will not be reported")
 	flag.BoolVar(&verbose, "verbose", false, "Print more information about copying statistics")
+	flag.BoolVar(&debug, "debug", false, "Print debug information")
 
 	flag.BoolVar(&showVersion, "version", false, "Show the version of this tool")
 
