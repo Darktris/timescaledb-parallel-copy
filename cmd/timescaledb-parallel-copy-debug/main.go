@@ -252,6 +252,7 @@ func processBatches(wg *sync.WaitGroup, C chan *batch) {
 			sp = splitter.Split(line, -1)
 			if debug {
 				fmt.Println(sp)
+				fmt.Println(len(sp))
 			}
 			for _, tsIndex := range tsColumns {
 				tsFloat, _ = strconv.ParseFloat(sp[tsIndex], 64)
